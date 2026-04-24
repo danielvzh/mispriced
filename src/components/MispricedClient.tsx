@@ -41,6 +41,7 @@ type LatestRun = {
   marketId: string;
   slug: string;
   question: string;
+  verdict: string | null;
   modelName: string;
   probability: number;
   confidence: number;
@@ -56,6 +57,22 @@ type LatestTx = {
   slug: string;
   question: string;
 };
+
+function mispricingPill(v: string | null): { label: string; cls: string } {
+  if (v === "reality") {
+    return { label: "Reality Distortion", cls: "border-[#ef4444] bg-[#fff1f2] text-[#b91c1c]" };
+  }
+  if (v === "wild") {
+    return { label: "Wild", cls: "border-[#f97316] bg-[#fff7ed] text-[#c2410c]" };
+  }
+  if (v === "questionable") {
+    return { label: "Questionable", cls: "border-[#fbbf24] bg-[#fffbeb] text-[#a16207]" };
+  }
+  if (v === "fair") {
+    return { label: "Fair", cls: "border-[#16a34a] bg-[#f0fdf4] text-[#166534]" };
+  }
+  return { label: "—", cls: "border-[#e8e8e8] bg-white text-[#5c5c5c]" };
+}
 
 const defaultF: Filters = {
   category: "all",
@@ -793,7 +810,7 @@ export function MispricedClient() {
               <p>No Grok runs yet.</p>
             ) : (
               <div className="h-[min(64vh,560px)] overflow-y-auto rounded border border-[#e8e8e8]">
-                <table className="w-full min-w-[640px] border-separate border-spacing-0 text-left text-[11px] text-[#1a1a1a]">
+                <table className="w-full min-w-[760px] border-separate border-spacing-0 text-left text-[11px] text-[#1a1a1a]">
                   <thead>
                     <tr className="text-[#5c5c5c]">
                       <th className="border-b border-[#e8e8e8] py-2 pl-2 pr-1">When</th>
@@ -801,6 +818,7 @@ export function MispricedClient() {
                       <th className="border-b border-[#e8e8e8] py-2 px-1">Model</th>
                       <th className="border-b border-[#e8e8e8] py-2 px-1">Prob</th>
                       <th className="border-b border-[#e8e8e8] py-2 px-1">Conf</th>
+                      <th className="border-b border-[#e8e8e8] py-2 px-1">Mispricing</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -821,6 +839,16 @@ export function MispricedClient() {
                         <td className="py-2 px-1 text-[#5c5c5c]">{r.modelName.replace("xai/", "Grok ")}</td>
                         <td className="py-2 px-1 tabular-nums">{(r.probability * 100).toFixed(0)}%</td>
                         <td className="py-2 px-1 tabular-nums">{r.confidence.toFixed(2)}</td>
+                        <td className="py-2 px-1">
+                          {(() => {
+                            const p = mispricingPill(r.verdict);
+                            return (
+                              <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium ${p.cls}`}>
+                                {p.label}
+                              </span>
+                            );
+                          })()}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

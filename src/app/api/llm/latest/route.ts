@@ -25,6 +25,11 @@ export async function GET(req: NextRequest) {
           select: {
             slug: true,
             question: true,
+            consensus: {
+              select: {
+                verdict: true,
+              },
+            },
           },
         },
       },
@@ -35,6 +40,7 @@ export async function GET(req: NextRequest) {
         marketId: r.marketId,
         slug: r.market.slug,
         question: r.market.question,
+        verdict: r.market.consensus?.verdict ?? null,
         modelName: r.modelName,
         probability: r.probability,
         confidence: r.confidence,
