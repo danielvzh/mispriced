@@ -498,6 +498,20 @@ export function MispricedClient() {
       return next;
     });
   }, []);
+  const openMarketBySlug = useCallback(async (slug: string) => {
+    try {
+      const r = await fetch(`/api/markets/${slug}`);
+      if (!r.ok) {
+        throw new Error("fetch_failed");
+      }
+      const j = (await r.json()) as { market?: MarketDTO };
+      if (j.market) {
+        setSel(j.market);
+      }
+    } catch {
+      /* keep latest table resilient if detail fetch fails */
+    }
+  }, []);
 
   useEffect(() => {
     const t = setInterval(() => {
@@ -823,18 +837,25 @@ export function MispricedClient() {
                   </thead>
                   <tbody>
                     {latestRuns.map((r) => (
-                      <tr key={`${r.marketId}-${r.ranAt}-${r.modelName}`} className="hover:bg-[#fafafa]">
+                      <tr
+                        key={`${r.marketId}-${r.ranAt}-${r.modelName}`}
+                        className="cursor-pointer hover:bg-[#fafafa]"
+                        onClick={() => {
+                          void openMarketBySlug(r.slug);
+                        }}
+                      >
                         <td className="py-2 pl-2 pr-1 align-top text-[#5c5c5c]">{ago(new Date(r.ranAt))}</td>
                         <td className="max-w-[440px] py-2 px-1 align-top">
-                          <a
-                            href={`https://polymarket.com/market/${r.slug}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="line-clamp-2 text-[#1a1a1a] hover:underline"
+                          <button
+                            type="button"
+                            onClick={() => {
+                              void openMarketBySlug(r.slug);
+                            }}
+                            className="line-clamp-2 text-left text-[#1a1a1a] hover:underline"
                             title={r.question}
                           >
                             {r.question}
-                          </a>
+                          </button>
                         </td>
                         <td className="py-2 px-1 text-[#5c5c5c]">{r.modelName.replace("xai/", "Grok ")}</td>
                         <td className="py-2 px-1 tabular-nums">{(r.probability * 100).toFixed(0)}%</td>
@@ -969,7 +990,7 @@ export function MispricedClient() {
         )}
       </div>
 
-      {selected && (view === "radar" || view === "table" || view === "settings") && (
+      {selected && (view === "radar" || view === "table" || view === "latest" || view === "settings") && (
         <div className="order-3 min-h-0 w-full min-w-0 max-w-sm shrink-0 border-t border-[#e8e8e8] md:order-3 md:w-auto md:border-t-0 md:border-l">
           <MarketDetail
             m={selected}
