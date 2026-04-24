@@ -1,0 +1,89 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Market {
+  id                String   @id
+  eventId          String
+  conditionId     String
+  slug             String   @unique
+  question         String
+  description      String?
+  category         String
+  subCategory      String?
+  outcomesJson     String
+  yesAssetId       String
+  noAssetId        String
+  marketProb       Float
+  bestBid          Float?
+  bestAsk          Float?
+  midpoint         Float?
+  spread           Float?
+  volume24h        Float    @default(0)
+  liquidityScore   Float    @default(0)
+  active           Boolean  @default(true)
+  closed           Boolean  @default(false)
+  endDate          DateTime?
+  lastPolymarketSyncAt DateTime?
+  polUpdatedAt     DateTime?
+  clobError        String?
+
+  history    MarketHistory[]
+  llmRuns    LlmRun[]
+  consensus  MarketConsensus?
+}
+
+model MarketHistory {
+  id         String   @id @default(cuid())
+  marketId   String
+  timestamp  DateTime @default(now())
+  marketProb Float
+  bestBid    Float?
+  bestAsk    Float?
+  volume24h  Float?
+
+  market Market @relation(fields: [marketId], references: [id], onDelete: Cascade)
+
+  @@index([marketId, timestamp])
+}
+
+model LlmRun {
+  id               String   @id @default(cuid())
+  marketId         String
+  modelName        String
+  promptVersion    String   @default("v1")
+  probability      Float
+  confidence       Float    @default(0)
+  reasoningSummary String
+  evidenceJson     Json     @default("[]")
+  ranAt            DateTime @default(now())
+
+  market Market @relation(fields: [marketId], references: [id], onDelete: Cascade)
+
+  @@index([marketId, ranAt])
+}
+
+model MarketConsensus {
+  id               String   @id @default(cuid())
+  marketId         String   @unique
+  consensusProb   Float
+  agreementScore  Float
+  confidenceScore Float
+  edge            Float
+  distortionScore Float
+  verdict         String
+  modelSpread     Float
+  isSynthetic     Boolean  @default(false)
+  lastComputedAt  DateTime @default(now())
+  lowProb         Float
+  highProb        Float
+  underpricedLabel String? // for UI: underpriced / overpriced / mixed
+
+  market Market @relation(fields: [marketId], references: [id], onDelete: Cascade)
+}
