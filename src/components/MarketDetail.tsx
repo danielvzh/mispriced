@@ -72,15 +72,19 @@ function disagreeLabel(a: number | null): string {
 export function MarketDetail({
   m,
   onHide,
+  onRepriceComplete,
   onClose,
 }: {
   m: MarketDTO;
   onHide: () => void;
+  onRepriceComplete?: () => void;
   onClose: () => void;
 }) {
   const [d, setD] = useState<D | null>(null);
   const [err, setE] = useState<string | null>(null);
   const [showFull, setShowFull] = useState(false);
+  const [repricing, setRepricing] = useState(false);
+  const [repriceMsg, setRepriceMsg] = useState<string | null>(null);
   const load = useCallback(async () => {
     setE(null);
     try {
@@ -102,6 +106,44 @@ export function MarketDetail({
     void load();
   }, [load]);
 
+  const reprice = useCallback(async () => {
+    setRepricing(true);
+    setRepriceMsg(null);
+    try {
+      const r = await fetch("/api/trade-recompute", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          marketId: m.id,
+          slug: m.slug,
+          notionalUsd: 1_000_000,
+        }),
+      });
+      const j = (await r.json().catch(() => ({}))) as {
+        ok?: boolean;
+        recomputed?: boolean;
+        skipped?: string;
+        error?: string;
+      };
+      if (!r.ok || !j.ok) {
+        throw new Error(j.error || "reprice_failed");
+      }
+      if (j.recomputed) {
+        setRepriceMsg("Re-priced with Grok.");
+        await load();
+        onRepriceComplete?.();
+      } else if (j.skipped) {
+        setRepriceMsg(`Skipped: ${j.skipped}`);
+      } else {
+        setRepriceMsg("No update.");
+      }
+    } catch (e) {
+      setRepriceMsg(`Failed: ${String(e)}`);
+    } finally {
+      setRepricing(false);
+    }
+  }, [m.id, m.slug, load, onRepriceComplete]);
+
   const rLow = m.lowProb != null ? m.lowProb : 0;
   const rHigh = m.highProb != null ? m.highProb : 1;
   const pm = `https://polymarket.com/market/${m.slug}`;
@@ -122,13 +164,23 @@ export function MarketDetail({
             {vChip.label}
           </span>
         </div>
-        <div className="flex shrink-0 gap-1">
+        <div className="flex shrink-0 flex-col gap-1">
           <button
             type="button"
             onClick={onHide}
             className="rounded border border-[#e8e8e8] px-2 py-1 text-[11px] text-[#1a1a1a] hover:bg-[#f5f5f5]"
           >
             Hide
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              void reprice();
+            }}
+            disabled={repricing}
+            className="rounded border border-[#e8e8e8] px-2 py-1 text-[11px] text-[#1a1a1a] hover:bg-[#f5f5f5] disabled:opacity-50"
+          >
+            {repricing ? "Re-pricing…" : "Re-price"}
           </button>
           <button
             type="button"
@@ -141,6 +193,11 @@ export function MarketDetail({
         </div>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto p-3 text-xs">
+        {repriceMsg && (
+          <p className="mb-2 rounded border border-[#e8e8e8] bg-[#fafafa] px-2 py-1.5 text-[10px] text-[#1a1a1a]">
+            {repriceMsg}
+          </p>
+        )}
         {err && <p className="text-[#db0007]">{err}</p>}
 
         <div className="mt-1 grid grid-cols-3 gap-2 text-center text-[#1a1a1a]">

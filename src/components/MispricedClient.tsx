@@ -976,6 +976,9 @@ export function MispricedClient() {
             onHide={() => {
               hideMarket(selected.id);
             }}
+            onRepriceComplete={() => {
+              void safeRefetch();
+            }}
             onClose={() => {
               setSel(null);
             }}

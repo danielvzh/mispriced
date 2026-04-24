@@ -11,9 +11,8 @@ export const metadata: Metadata = {
   title: "Mispriced.lol",
   description: "Grok vs Polymarket — reasoning-based fair ranges, radar and table",
   icons: {
-    icon: [],
-    shortcut: [],
-    apple: [],
+    icon: "/favicon.svg",
+    shortcut: "/favicon.svg",
   },
 };
 
