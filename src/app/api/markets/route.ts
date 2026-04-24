@@ -65,6 +65,17 @@ export async function GET(req: NextRequest) {
 
   try {
     const total = await prisma.market.count({ where: wh });
+    const grokCheckedTotal = await prisma.market.count({
+      where: {
+        ...wh,
+        consensus: { is: { isSynthetic: false } },
+        llmRuns: {
+          some: {
+            modelName: { startsWith: "xai/" },
+          },
+        },
+      },
+    });
     const totalPages = Math.max(1, Math.ceil(total / limit));
     const safePage = Math.min(page, totalPages);
     const skip = (safePage - 1) * limit;
@@ -96,6 +107,7 @@ export async function GET(req: NextRequest) {
         page: safePage,
         limit,
         total,
+        grokCheckedTotal,
         totalPages,
         hasMore: safePage < totalPages,
       },

@@ -32,6 +32,7 @@ type Pagination = {
   page: number;
   limit: number;
   total: number;
+  grokCheckedTotal?: number;
   totalPages: number;
   hasMore: boolean;
 };
@@ -174,6 +175,7 @@ export function MispricedClient() {
     page: 1,
     limit: PAGE_SIZE,
     total: 0,
+    grokCheckedTotal: 0,
     totalPages: 1,
     hasMore: false,
   });
@@ -271,6 +273,7 @@ export function MispricedClient() {
         page: pageNum,
         limit: PAGE_SIZE,
         total: j.markets.length,
+        grokCheckedTotal: j.markets.filter((m) => !m.isSynthetic).length,
         totalPages: 1,
         hasMore: false,
       });
@@ -331,8 +334,10 @@ export function MispricedClient() {
     setLatestRuns(j.runs || []);
   }, []);
   const refetchBusy = useRef(false);
+  const refetchPending = useRef(false);
   const safeRefetch = useCallback(async () => {
     if (refetchBusy.current) {
+      refetchPending.current = true;
       return;
     }
     refetchBusy.current = true;
@@ -344,12 +349,25 @@ export function MispricedClient() {
       }
     } finally {
       refetchBusy.current = false;
+      if (refetchPending.current) {
+        refetchPending.current = false;
+        queueMicrotask(() => {
+          void safeRefetch();
+        });
+      }
     }
   }, [view, refetchRadarAll, refetchPage, page]);
 
   useEffect(() => {
     void safeRefetch();
   }, [safeRefetch]);
+  useEffect(() => {
+    if (view !== "radar") {
+      // Cancel any in-progress radar aggregation when leaving radar view.
+      radarReqRef.current += 1;
+      setRadarLoadingMore(false);
+    }
+  }, [view]);
   useEffect(() => {
     if (view === "latest") {
       void fetchLatestRuns();
@@ -477,7 +495,7 @@ export function MispricedClient() {
   const stats = useMemo(() => {
     const n = filtered.length;
     if (!n) {
-      return { avg: 0, top: null as MarketDTO | null, scanned: pg.total };
+      return { avg: 0, top: null as MarketDTO | null, scanned: pg.grokCheckedTotal ?? 0 };
     }
     const edges = filtered
       .map((m) => m.edge)
@@ -488,8 +506,8 @@ export function MispricedClient() {
     const top = [...filtered].sort(
       (a, b) => (b.distortion ?? 0) - (a.distortion ?? 0),
     )[0] ?? null;
-    return { avg, top, scanned: pg.total };
-  }, [filtered, pg.total]);
+    return { avg, top, scanned: pg.grokCheckedTotal ?? 0 };
+  }, [filtered, pg.grokCheckedTotal]);
 
   const empty = !list || list.length === 0;
   return (

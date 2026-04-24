@@ -21,6 +21,22 @@ const VR = (v: string | null) => {
   return "Fair";
 };
 
+function mispricingPill(v: string | null): { label: string; cls: string } {
+  if (v === "reality") {
+    return { label: "Reality Distortion", cls: "border-[#ef4444] bg-[#fff1f2] text-[#b91c1c]" };
+  }
+  if (v === "wild") {
+    return { label: "Wild", cls: "border-[#f97316] bg-[#fff7ed] text-[#c2410c]" };
+  }
+  if (v === "questionable") {
+    return { label: "Questionable", cls: "border-[#fbbf24] bg-[#fffbeb] text-[#a16207]" };
+  }
+  if (v === "fair") {
+    return { label: "Fair", cls: "border-[#16a34a] bg-[#f0fdf4] text-[#166534]" };
+  }
+  return { label: "—", cls: "border-[#e8e8e8] bg-white text-[#5c5c5c]" };
+}
+
 type Props = {
   rows: MarketDTO[];
   onSelect: (m: MarketDTO) => void;
@@ -29,7 +45,7 @@ type Props = {
 export function MarketTable({ rows, onSelect }: Props) {
   return (
     <div className="w-full overflow-x-auto rounded-lg border border-[#e8e8e8] bg-white">
-      <table className="w-full min-w-[800px] border-separate border-spacing-0 text-left text-xs text-[#1a1a1a]">
+      <table className="w-full min-w-[930px] border-separate border-spacing-0 text-left text-xs text-[#1a1a1a]">
         <thead>
           <tr className="text-[#5c5c5c]">
             <th className="border-b border-[#e8e8e8] py-2.5 pl-3 pr-1 text-[11px] font-medium">
@@ -42,6 +58,7 @@ export function MarketTable({ rows, onSelect }: Props) {
             <th className="border-b border-[#e8e8e8] py-2.5 px-1 text-[11px] font-medium">Agree</th>
             <th className="border-b border-[#e8e8e8] py-2.5 px-1 text-[11px] font-medium">Conf</th>
             <th className="border-b border-[#e8e8e8] py-2.5 px-1 text-[11px] font-medium">Vol</th>
+            <th className="border-b border-[#e8e8e8] py-2.5 px-1 text-[11px] font-medium">Mispricing</th>
             <th className="border-b border-[#e8e8e8] py-2.5 pl-1 pr-3 text-right text-[11px] font-medium">Verdict</th>
           </tr>
         </thead>
@@ -90,6 +107,16 @@ export function MarketTable({ rows, onSelect }: Props) {
               </td>
               <td className="whitespace-nowrap text-[#5c5c5c]">
                 {Math.round(m.volume24h).toLocaleString()}
+              </td>
+              <td className="py-2 px-1">
+                {(() => {
+                  const p = mispricingPill(m.verdict);
+                  return (
+                    <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium ${p.cls}`}>
+                      {p.label}
+                    </span>
+                  );
+                })()}
               </td>
               <td className="pl-1 pr-3 text-right text-[#5c5c5c]">{VR(m.verdict)}</td>
             </tr>
