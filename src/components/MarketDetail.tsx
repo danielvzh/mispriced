@@ -69,6 +69,43 @@ function disagreeLabel(a: number | null): string {
   return "High";
 }
 
+function tenKScenario(m: MarketDTO): {
+  side: "Buy YES" | "Buy NO";
+  profit: number;
+  roi: number;
+  apy: number | null;
+} | null {
+  if (m.consensusProb == null) {
+    return null;
+  }
+  const clamp = (x: number) => Math.min(0.99, Math.max(0.01, x));
+  const marketYes = clamp(m.marketProb);
+  const fairYes = clamp(m.consensusProb);
+  const stake = 10_000;
+
+  const buyYes = fairYes >= marketYes;
+  const entry = buyYes ? marketYes : 1 - marketYes;
+  const fair = buyYes ? fairYes : 1 - fairYes;
+  const shares = stake / entry;
+  const profit = (fair - entry) * shares;
+  const roi = profit / stake;
+
+  let apy: number | null = null;
+  if (m.endDate) {
+    const days = (new Date(m.endDate).getTime() - Date.now()) / 864e5;
+    if (days > 0.25 && roi > -0.999) {
+      apy = Math.pow(1 + roi, 365 / days) - 1;
+    }
+  }
+
+  return {
+    side: buyYes ? "Buy YES" : "Buy NO",
+    profit,
+    roi,
+    apy,
+  };
+}
+
 export function MarketDetail({
   m,
   onHide,
@@ -150,6 +187,7 @@ export function MarketDetail({
   const vChip = verdictChip(m.verdict);
   const vBig = bigVerdict(m);
   const nModels = d?.modelEstimates.length ?? 1;
+  const scenario = tenKScenario(m);
 
   return (
     <aside className="flex h-full w-full min-w-0 max-w-sm flex-col border-l border-[#e8e8e8] bg-white">
@@ -254,6 +292,43 @@ export function MarketDetail({
 
         <div className="mt-4 rounded-lg border border-rose-100 bg-rose-50 p-3 text-center">
           <p className={`text-sm font-extrabold tracking-wide ${vBig.className}`}>{vBig.text}</p>
+        </div>
+        <div className="mt-3 rounded-lg border border-[#e8e8e8] bg-white p-3">
+          <h3 className="text-[9px] font-bold uppercase tracking-wider text-[#5c5c5c]">
+            $10k bet scenario
+          </h3>
+          {scenario ? (
+            <div className="mt-1.5 space-y-1 text-[11px]">
+              <div className="flex items-center justify-between text-[#5c5c5c]">
+                <span>Action</span>
+                <span className="font-medium text-[#1a1a1a]">{scenario.side}</span>
+              </div>
+              <div className="flex items-center justify-between text-[#5c5c5c]">
+                <span>Est. profit to fair value</span>
+                <span className={scenario.profit >= 0 ? "font-medium text-[#16a34a]" : "font-medium text-[#db0007]"}>
+                  {scenario.profit >= 0 ? "+" : "-"}${Math.abs(scenario.profit).toFixed(0)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[#5c5c5c]">
+                <span>ROI</span>
+                <span className={scenario.roi >= 0 ? "font-medium text-[#16a34a]" : "font-medium text-[#db0007]"}>
+                  {scenario.roi >= 0 ? "+" : ""}{(scenario.roi * 100).toFixed(1)}%
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[#5c5c5c]">
+                <span>Annualized APY</span>
+                <span className="font-medium text-[#1a1a1a]">
+                  {scenario.apy == null
+                    ? "—"
+                    : `${scenario.apy >= 0 ? "+" : ""}${(scenario.apy * 100).toFixed(1)}%`}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <p className="mt-1.5 text-[10px] text-[#5c5c5c]">
+              Not available until Grok consensus is computed.
+            </p>
+          )}
         </div>
 
         {d && d.modelEstimates.length > 0 && (

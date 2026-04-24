@@ -261,7 +261,7 @@ export function MispricedClient() {
       q.set("verdict", f.verdict);
     }
     q.set("sort", "distortion");
-    if (mode === "radar") {
+    if (mode === "radar" || mode === "table") {
       q.set("grokOnly", "1");
     }
     q.set("page", String(pageNum));
